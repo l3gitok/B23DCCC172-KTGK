@@ -3,6 +3,7 @@ import { Button, Input, message, Select, Modal } from 'antd';
 import OrderTable from '@/components/OrderTable';
 import OrderForm from '@/components/OrderForm';
 import useOrderModel from '@/models/order';
+import moment from 'moment';
 
 const OrdersPage = () => {
 	const { orders, addOrder, updateOrder, deleteOrder } = useOrderModel();
@@ -37,6 +38,11 @@ const OrdersPage = () => {
 
 	// Xử lý thêm đơn hàng
 	const handleAddSubmit = (order: any) => {
+		if (moment(order.date).isBefore(moment(), 'day')) {
+			message.error('Không thể đặt hàng trong quá khứ!');
+			return;
+		}
+
 		const newOrderId = `ORD-${Date.now()}`;
 		const isDuplicate = orders.some((o) => o.id === newOrderId);
 		if (isDuplicate) {
@@ -51,6 +57,11 @@ const OrdersPage = () => {
 
 	// Xử lý chỉnh sửa đơn hàng
 	const handleEditSubmit = (order: any) => {
+		if (moment(order.date).isBefore(moment(), 'day')) {
+			message.error('Không thể đặt hàng trong quá khứ!');
+			return;
+		}
+
 		updateOrder(order.id, order);
 		message.success('Đã cập nhật đơn hàng');
 		setEditingOrder(null);

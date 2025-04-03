@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Select, Table, InputNumber, Button, message } from 'antd';
+import { Form, Select, Table, InputNumber, Button, message, DatePicker } from 'antd';
 import { Order } from '@/models/order';
 import { calculateTotal } from '@/services/order';
+import moment from 'moment';
 
 interface Props {
 	order?: Order;
@@ -44,6 +45,7 @@ const OrderForm: React.FC<Props> = ({ order, onSubmit, onCancel }) => {
 			...values,
 			products,
 			total,
+			date: values.date.format('YYYY-MM-DD'), // Lưu ngày đặt hàng dưới dạng chuỗi
 			id: order?.id || `ORD-${Date.now()}`, // Tạo mã mới nếu không có
 		};
 
@@ -55,7 +57,10 @@ const OrderForm: React.FC<Props> = ({ order, onSubmit, onCancel }) => {
 			form={form}
 			layout='vertical'
 			onFinish={handleFinish}
-			initialValues={order || { customer: '', status: '', products: [] }} // Giá trị mặc định
+			initialValues={{
+				...order,
+				date: order?.date ? moment(order.date, 'YYYY-MM-DD') : null, // Hiển thị ngày nếu có
+			}}
 		>
 			<Form.Item name='customer' label='Khách hàng' rules={[{ required: true, message: 'Vui lòng chọn khách hàng' }]}>
 				<Select placeholder='Chọn khách hàng'>
@@ -73,6 +78,23 @@ const OrderForm: React.FC<Props> = ({ order, onSubmit, onCancel }) => {
 					<Select.Option value='Hoàn thành'>Hoàn thành</Select.Option>
 					<Select.Option value='Hủy'>Hủy</Select.Option>
 				</Select>
+			</Form.Item>
+			<Form.Item
+				name='date'
+				label='Ngày đặt hàng'
+				rules={[
+					{ required: true, message: 'Vui lòng chọn ngày đặt hàng' },
+					() => ({
+						validator(_, value) {
+							if (!value || value.isSameOrAfter(moment(), 'day')) {
+								return Promise.resolve();
+							}
+							return Promise.reject(new Error('Không thể chọn ngày trong quá khứ!'));
+						},
+					}),
+				]}
+			>
+				<DatePicker style={{ width: '100%' }} />
 			</Form.Item>
 			<Select
 				placeholder='Chọn sản phẩm'

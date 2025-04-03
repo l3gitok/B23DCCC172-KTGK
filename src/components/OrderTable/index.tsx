@@ -26,6 +26,7 @@ const OrderTable: React.FC<Props> = ({ orders, onEdit, onDelete, onRemove }) => 
 			dataIndex: 'date',
 			key: 'date',
 			sorter: (a: Order, b: Order) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+			render: (date: string) => new Date(date).toLocaleDateString('vi-VN'), // Hiển thị ngày theo định dạng DD/MM/YYYY
 		},
 		{
 			title: 'Tổng tiền',
