@@ -36,6 +36,12 @@
 		component: './RandomUser',
 		icon: 'ArrowsAltOutlined',
 	},
+	{
+		path: '/orders',
+		name: 'Quản lý đơn hàng',
+		component: './Orders',
+		icon: 'ShoppingCartOutlined',
+	},
 
 	// DANH MUC HE THONG
 	// {
