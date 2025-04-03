@@ -19,10 +19,9 @@ export interface Order {
 export default () => {
 	const [orders, setOrders] = useState<Order[]>(getFromLocalStorage('orders'));
 
-	const addOrder = (order: Order) => {
-		const updatedOrders = [...orders, order];
-		setOrders(updatedOrders);
-		saveToLocalStorage('orders', updatedOrders);
+	const addOrder = (newOrder: Order) => {
+		setOrders((prevOrders) => [...prevOrders, newOrder]); // Thêm đơn hàng mới vào danh sách
+		saveToLocalStorage('orders', [...orders, newOrder]);
 	};
 
 	const updateOrder = (id: string, updatedOrder: Partial<Order>) => {

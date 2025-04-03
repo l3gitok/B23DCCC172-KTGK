@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Form, Select, Table, InputNumber, Button } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Form, Select, Table, InputNumber, Button, message } from 'antd';
 import { Order } from '@/models/order';
 import { calculateTotal } from '@/services/order';
 
@@ -16,37 +16,50 @@ const productsList = [
 ];
 
 const OrderForm: React.FC<Props> = ({ order, onSubmit, onCancel }) => {
-	const [products, setProducts] = useState(order?.products || []);
+	const [products, setProducts] = useState(order?.products || []); // Khởi tạo danh sách sản phẩm
 	const [form] = Form.useForm();
 
+	useEffect(() => {
+		// Reset danh sách sản phẩm và các trường trong form khi order thay đổi
+		setProducts(order?.products || []); // Nếu order là null, danh sách sản phẩm sẽ trống
+		form.resetFields(); // Reset các trường trong form
+	}, [order, form]);
+
 	const handleAddProduct = (productName: string) => {
+		const isProductExist = products.some((product) => product.name === productName);
+		if (isProductExist) {
+			message.error('Sản phẩm này đã được thêm vào danh sách!');
+			return;
+		}
+
 		const product = productsList.find((p) => p.name === productName);
 		if (product) {
 			setProducts([...products, { ...product, quantity: 1 }]);
 		}
 	};
 
-	const handleQuantityChange = (productName: string, quantity: number) => {
-		setProducts((prevProducts) =>
-			prevProducts.map((product) => (product.name === productName ? { ...product, quantity } : product)),
-		);
-	};
-
 	const handleFinish = (values: any) => {
-		const total = calculateTotal(products); // Tính tổng tiền
-		const updatedOrder = { ...values, products, total, id: order?.id || `ORD-${Date.now()}` }; // Giữ nguyên mã nếu chỉnh sửa
-		onSubmit(updatedOrder);
+		const total = products.reduce((sum, product) => sum + product.price * product.quantity, 0); // Tính tổng tiền
+		const updatedOrder = {
+			...values,
+			products,
+			total,
+			id: order?.id || `ORD-${Date.now()}`, // Tạo mã mới nếu không có
+		};
+
+		onSubmit(updatedOrder); // Gọi hàm onSubmit để xử lý
 	};
-
-	// Removed unused handleSubmit function
-
-	const customers = ['Nguyễn Văn A', 'Trần Thị B', 'Lê Văn C']; // Danh sách khách hàng mẫu
 
 	return (
-		<Form form={form} layout='vertical' onFinish={handleFinish} initialValues={order}>
+		<Form
+			form={form}
+			layout='vertical'
+			onFinish={handleFinish}
+			initialValues={order || { customer: '', status: '', products: [] }} // Giá trị mặc định
+		>
 			<Form.Item name='customer' label='Khách hàng' rules={[{ required: true, message: 'Vui lòng chọn khách hàng' }]}>
 				<Select placeholder='Chọn khách hàng'>
-					{customers.map((customer) => (
+					{['Nguyễn Văn A', 'Trần Thị B', 'Lê Văn C'].map((customer) => (
 						<Select.Option key={customer} value={customer}>
 							{customer}
 						</Select.Option>
@@ -54,7 +67,7 @@ const OrderForm: React.FC<Props> = ({ order, onSubmit, onCancel }) => {
 				</Select>
 			</Form.Item>
 			<Form.Item name='status' label='Trạng thái' rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
-				<Select>
+				<Select placeholder='Chọn trạng thái'>
 					<Select.Option value='Chờ xác nhận'>Chờ xác nhận</Select.Option>
 					<Select.Option value='Đang giao'>Đang giao</Select.Option>
 					<Select.Option value='Hoàn thành'>Hoàn thành</Select.Option>
@@ -67,7 +80,11 @@ const OrderForm: React.FC<Props> = ({ order, onSubmit, onCancel }) => {
 				style={{ width: '100%', marginBottom: 16 }}
 			>
 				{productsList.map((product) => (
-					<Select.Option key={product.name} value={product.name}>
+					<Select.Option
+						key={product.name}
+						value={product.name}
+						disabled={products.some((p) => p.name === product.name)} // Vô hiệu hóa sản phẩm đã chọn
+					>
 						{product.name} - {product.price.toLocaleString()} VND
 					</Select.Option>
 				))}
@@ -85,7 +102,13 @@ const OrderForm: React.FC<Props> = ({ order, onSubmit, onCancel }) => {
 							<InputNumber
 								min={1}
 								value={quantity}
-								onChange={(value) => handleQuantityChange(record.name, value || 1)}
+								onChange={(value) =>
+									setProducts((prevProducts) =>
+										prevProducts.map((product) =>
+											product.name === record.name ? { ...product, quantity: value || 1 } : product,
+										),
+									)
+								}
 							/>
 						),
 					},
@@ -93,6 +116,20 @@ const OrderForm: React.FC<Props> = ({ order, onSubmit, onCancel }) => {
 						title: 'Thành tiền',
 						key: 'total',
 						render: (_, record) => `${(record.price * record.quantity).toLocaleString()} VND`,
+					},
+					{
+						title: 'Hành động',
+						key: 'action',
+						render: (_, record) => (
+							<Button
+								danger
+								onClick={() =>
+									setProducts((prevProducts) => prevProducts.filter((product) => product.name !== record.name))
+								}
+							>
+								Xóa
+							</Button>
+						),
 					},
 				]}
 				rowKey='name'

@@ -6,98 +6,63 @@ import useOrderModel from '@/models/order';
 
 const OrdersPage = () => {
 	const { orders, addOrder, updateOrder, deleteOrder } = useOrderModel();
-	const [editingOrder, setEditingOrder] = useState<{
-		id: string;
-		customer: string;
-		date: string;
-		total: number;
-		status: 'Chờ xác nhận' | 'Đang giao' | 'Hoàn thành' | 'Hủy';
-		products: any[];
-	} | null>(null);
+	const [editingOrder, setEditingOrder] = useState<null | any>(null);
+	const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+	const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 	const [searchText, setSearchText] = useState('');
 	const [filterStatus, setFilterStatus] = useState('');
 
-	const handleAdd = () =>
-		setEditingOrder({
-			id: '',
-			customer: '',
-			date: new Date().toISOString(),
-			total: 0,
-			status: 'Chờ xác nhận',
-			products: [],
-		});
-
-	const handleEdit = (order: any) => setEditingOrder(order);
-
-	const handleDelete = (id: string) => {
-		const order = orders.find((o) => o.id === id);
-		if (!order) return;
-
-		if (order.status !== 'Chờ xác nhận') {
-			message.error('Chỉ có thể hủy đơn hàng ở trạng thái "Chờ xác nhận"');
-			return;
-		}
-
-		// Cập nhật trạng thái thành "Hủy"
-		updateOrder(id, { status: 'Hủy' });
-		message.success('Đơn hàng đã được hủy');
+	// Hiển thị modal thêm đơn hàng
+	const handleAdd = () => {
+		setEditingOrder(null); // Đặt giá trị null để đảm bảo form trống
+		setIsAddModalVisible(true);
 	};
 
-	const handleRemove = (id: string) => {
-		const order = orders.find((o) => o.id === id);
-		if (!order) return;
-
-		if (order.status !== 'Hủy') {
-			message.error('Chỉ có thể xóa đơn hàng ở trạng thái "Hủy"');
-			return;
-		}
-
-		deleteOrder(id); // Xóa đơn hàng khỏi danh sách
-		message.success('Đơn hàng đã được xóa');
+	// Hiển thị modal chỉnh sửa đơn hàng
+	const handleEdit = (order: any) => {
+		setEditingOrder(order);
+		setIsEditModalVisible(true);
 	};
 
-	const handleSubmit = (order: any) => {
-		if (!order.id) {
-			const isDuplicate = orders.some((o) => o.id === order.id);
-			if (isDuplicate) {
-				message.error('Mã đơn hàng đã tồn tại!');
-				return;
-			}
-		}
-		if (order.id) {
-			updateOrder(order.id, order);
-			message.success('Đã cập nhật đơn hàng');
-		} else {
-			addOrder({ ...order, id: `ORD-${Date.now()}` });
-			message.success('Đã thêm đơn hàng');
-		}
+	// Đóng modal thêm đơn hàng
+	const handleAddCancel = () => {
+		setIsAddModalVisible(false);
+	};
+
+	// Đóng modal chỉnh sửa đơn hàng
+	const handleEditCancel = () => {
 		setEditingOrder(null);
+		setIsEditModalVisible(false);
 	};
 
-	const submitOrder = (order: any) => {
-		if (order.id) {
-			// Cập nhật đơn hàng
-			updateOrder(order.id, order);
-			message.success('Đã cập nhật đơn hàng');
-		} else {
-			// Kiểm tra trùng mã đơn hàng
-			const isDuplicate = orders.some((o) => o.id === order.id);
-			if (isDuplicate) {
-				message.error('Mã đơn hàng đã tồn tại!');
-				return;
-			}
-
-			// Thêm đơn hàng mới
-			addOrder({ ...order, id: `ORD-${Date.now()}` });
-			message.success('Đã thêm đơn hàng');
+	// Xử lý thêm đơn hàng
+	const handleAddSubmit = (order: any) => {
+		const newOrderId = `ORD-${Date.now()}`;
+		const isDuplicate = orders.some((o) => o.id === newOrderId);
+		if (isDuplicate) {
+			message.error('Mã đơn hàng đã tồn tại!');
+			return;
 		}
+
+		addOrder({ ...order, id: newOrderId });
+		message.success('Đã thêm đơn hàng');
+		setIsAddModalVisible(false);
 	};
 
+	// Xử lý chỉnh sửa đơn hàng
+	const handleEditSubmit = (order: any) => {
+		updateOrder(order.id, order);
+		message.success('Đã cập nhật đơn hàng');
+		setEditingOrder(null);
+		setIsEditModalVisible(false);
+	};
+
+	// Lọc đơn hàng
 	const filteredOrders = orders.filter(
 		(order) =>
 			(order.id.toLowerCase().includes(searchText.toLowerCase()) ||
 				order.customer.toLowerCase().includes(searchText.toLowerCase())) &&
-			(filterStatus ? order.status === filterStatus : true), // Hiển thị tất cả nếu filterStatus rỗng
+			(filterStatus ? order.status === filterStatus : true),
 	);
 
 	return (
@@ -114,7 +79,7 @@ const OrdersPage = () => {
 					allowClear
 					style={{ width: 200 }}
 				>
-					<Select.Option value=''>Tất cả</Select.Option> {/* Hiển thị tất cả trạng thái */}
+					<Select.Option value=''>Tất cả</Select.Option>
 					<Select.Option value='Chờ xác nhận'>Chờ xác nhận</Select.Option>
 					<Select.Option value='Đang giao'>Đang giao</Select.Option>
 					<Select.Option value='Hoàn thành'>Hoàn thành</Select.Option>
@@ -127,16 +92,38 @@ const OrdersPage = () => {
 			<OrderTable
 				orders={filteredOrders}
 				onEdit={handleEdit}
-				onDelete={handleDelete} // Gọi handleDelete khi hủy
-				onRemove={handleRemove} // Gọi handleRemove khi xóa
+				onDelete={(id) => {
+					const order = orders.find((o) => o.id === id);
+					if (!order) return;
+
+					if (order.status !== 'Chờ xác nhận') {
+						message.error('Chỉ có thể hủy đơn hàng ở trạng thái "Chờ xác nhận"');
+						return;
+					}
+
+					updateOrder(id, { status: 'Hủy' });
+					message.success('Đơn hàng đã được hủy');
+				}}
+				onRemove={(id) => {
+					const order = orders.find((o) => o.id === id);
+					if (!order) return;
+
+					if (order.status !== 'Hủy') {
+						message.error('Chỉ có thể xóa đơn hàng ở trạng thái "Hủy"');
+						return;
+					}
+
+					deleteOrder(id);
+					message.success('Đơn hàng đã được xóa');
+				}}
 			/>
-			<Modal
-				visible={!!editingOrder}
-				title={editingOrder?.id ? 'Chỉnh sửa đơn hàng' : 'Thêm đơn hàng'}
-				onCancel={() => setEditingOrder(null)}
-				footer={null}
-			>
-				<OrderForm order={editingOrder || undefined} onSubmit={handleSubmit} onCancel={() => setEditingOrder(null)} />
+			{/* Modal Thêm Đơn Hàng */}
+			<Modal visible={isAddModalVisible} title='Thêm đơn hàng' onCancel={handleAddCancel} footer={null}>
+				<OrderForm onSubmit={handleAddSubmit} onCancel={handleAddCancel} />
+			</Modal>
+			{/* Modal Chỉnh Sửa Đơn Hàng */}
+			<Modal visible={isEditModalVisible} title='Chỉnh sửa đơn hàng' onCancel={handleEditCancel} footer={null}>
+				<OrderForm order={editingOrder} onSubmit={handleEditSubmit} onCancel={handleEditCancel} />
 			</Modal>
 		</div>
 	);
